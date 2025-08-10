@@ -1,6 +1,7 @@
 package app.olauncher.ui
 
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -54,8 +55,6 @@ class AppDrawerFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         prefs = Prefs(requireContext())
-        prefs.appAliases["alias.cm"] = "com.android.chrome"
-        prefs.appAliases["alias.ca"] = "com.android.camera2"
         arguments?.let {
             flag = it.getInt(Constants.Key.FLAG, Constants.FLAG_LAUNCH_APP)
             canRename = it.getBoolean(Constants.Key.RENAME, false)
@@ -96,7 +95,8 @@ class AppDrawerFragment : Fragment() {
                 try {
                     adapter.filter.filter(newText)
                     binding.appDrawerTip.visibility = View.GONE
-                    binding.appRename.visibility = if (canRename && newText.isNotBlank()) View.VISIBLE else View.GONE
+                    binding.appRename.visibility =
+                        if (canRename && newText.isNotBlank()) View.VISIBLE else View.GONE
                     return true
                 } catch (e: Exception) {
                     e.printStackTrace()
@@ -162,6 +162,19 @@ class AppDrawerFragment : Fragment() {
             },
             appRenameListener = { appModel, renameLabel ->
                 prefs.setAppRenameLabel(appModel.appPackage, renameLabel)
+                viewModel.getAppList()
+            },
+            appAliasListener = { model, alias ->
+                prefs.aliasOf(model.appPackage)?.let {
+                    Log.d(null, "Removing alias '$it' from '${model.appPackage}'")
+                    prefs.appAliases.remove("alias.$it")
+                }
+                if (alias.isNotEmpty()) {
+                    prefs.appAliases["alias.$alias"] = model.appPackage
+                    Log.d(null, "Added alias '$alias' to app '${model.appPackage}'")
+                    Log.d(null, "aliases: ${prefs.appAliases.entries.joinToString(", ")}")
+                }
+
                 viewModel.getAppList()
             },
             aliases = prefs.appAliases

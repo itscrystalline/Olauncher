@@ -3,8 +3,8 @@ package app.olauncher.ui
 import android.content.Context
 import android.os.UserHandle
 import android.text.Editable
+import android.text.InputFilter
 import android.text.TextWatcher
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -23,7 +23,6 @@ import app.olauncher.helper.hideKeyboard
 import app.olauncher.helper.isSystemApp
 import app.olauncher.helper.showKeyboard
 import java.text.Normalizer
-import java.util.Locale
 
 class AppDrawerAdapter(
     private var flag: Int,
@@ -33,6 +32,7 @@ class AppDrawerAdapter(
     private val appDeleteListener: (AppModel) -> Unit,
     private val appHideListener: (AppModel, Int) -> Unit,
     private val appRenameListener: (AppModel, String) -> Unit,
+    private val appAliasListener: (AppModel, String) -> Unit,
     private val aliases: Map<String, String>
 ) : ListAdapter<AppModel, AppDrawerAdapter.ViewHolder>(DIFF_CALLBACK), Filterable {
 
@@ -76,7 +76,10 @@ class AppDrawerAdapter(
                 appDeleteListener,
                 appInfoListener,
                 appHideListener,
-                appRenameListener
+                appRenameListener,
+                appAliasListener,
+                currentAlias = aliases.filterValues { v -> v == appModel.appPackage }.keys.firstOrNull()
+                    ?.removePrefix("alias.")
             )
         } catch (e: Exception) {
             e.printStackTrace()
@@ -175,6 +178,8 @@ class AppDrawerAdapter(
             appInfoListener: (AppModel) -> Unit,
             appHideListener: (AppModel, Int) -> Unit,
             appRenameListener: (AppModel, String) -> Unit,
+            appAliasListener: (AppModel, String) -> Unit,
+            currentAlias: String?
         ) =
             with(binding) {
                 appHideLayout.visibility = View.GONE
@@ -266,6 +271,79 @@ class AppDrawerAdapter(
                         renameLayout.visibility = View.GONE
                     }
                 }
+                appAlias.setOnClickListener {
+                    if (appModel.appPackage.isNotEmpty()) {
+                        val alias = currentAlias ?: getAppName(
+                            etAppRename.context,
+                            appModel.appPackage
+                        ).lowercase().replace(" ", "")
+                        etAliasSet.hint = alias
+                        etAliasSet.setText(alias)
+                        etAliasSet.setSelectAllOnFocus(true)
+                        aliasLayout.visibility = View.VISIBLE
+                        appHideLayout.visibility = View.GONE
+                        etAliasSet.showKeyboard()
+                        etAliasSet.imeOptions = EditorInfo.IME_ACTION_DONE;
+                    }
+                }
+                etAliasSet.onFocusChangeListener = View.OnFocusChangeListener { v, hasFocus ->
+                    if (hasFocus)
+                        appTitle.visibility = View.INVISIBLE
+                    else
+                        appTitle.visibility = View.VISIBLE
+                }
+                etAliasSet.filters =
+                    arrayOf(InputFilter { src, _, _, _, _, _ ->
+                        src.toString().lowercase().replace(" ", "")
+                    })
+                etAliasSet.addTextChangedListener(object : TextWatcher {
+                    override fun afterTextChanged(s: Editable?) {
+                        etAliasSet.hint =
+                            currentAlias ?: getAppName(
+                                etAppRename.context,
+                                appModel.appPackage
+                            ).lowercase().replace(" ", "")
+                    }
+
+                    override fun beforeTextChanged(
+                        s: CharSequence?,
+                        start: Int,
+                        count: Int,
+                        after: Int,
+                    ) {
+                    }
+
+                    override fun onTextChanged(
+                        s: CharSequence?,
+                        start: Int,
+                        before: Int,
+                        count: Int,
+                    ) {
+                        etAliasSet.hint = ""
+                    }
+                })
+                etAliasSet.setOnEditorActionListener { _, actionCode, _ ->
+                    if (actionCode == EditorInfo.IME_ACTION_DONE) {
+                        val renameLabel = etAliasSet.text.toString().trim()
+                        if (renameLabel.isNotBlank() && appModel.appPackage.isNotBlank()) {
+                            appAliasListener(appModel, renameLabel)
+                            aliasLayout.visibility = View.GONE
+                        }
+                        true
+                    }
+                    false
+                }
+                tvSetAlias.setOnClickListener {
+                    etAliasSet.hideKeyboard()
+                    val aliasLabel = etAliasSet.text.toString().trim()
+                    if (aliasLabel.isNotBlank() && appModel.appPackage.isNotBlank()) {
+                        appAliasListener(appModel, aliasLabel)
+                        aliasLayout.visibility = View.GONE
+                    } else {
+                        appAliasListener(appModel, "")
+                        aliasLayout.visibility = View.GONE
+                    }
+                }
                 appInfo.setOnClickListener { appInfoListener(appModel) }
                 appDelete.setOnClickListener { appDeleteListener(appModel) }
                 appMenuClose.setOnClickListener {
@@ -274,6 +352,10 @@ class AppDrawerAdapter(
                 }
                 appRenameClose.setOnClickListener {
                     renameLayout.visibility = View.GONE
+                    appTitle.visibility = View.VISIBLE
+                }
+                aliasClose.setOnClickListener {
+                    aliasLayout.visibility = View.GONE
                     appTitle.visibility = View.VISIBLE
                 }
                 appHide.setOnClickListener { appHideListener(appModel, bindingAdapterPosition) }

@@ -461,6 +461,8 @@ class Prefs(context: Context) {
     fun setAppRenameLabel(appPackage: String, renameLabel: String) =
         prefs.edit() { putString(appPackage, renameLabel) }
 
+    fun aliasOf(appPackage: String): String? = appAliases.filterValues { v -> v == appPackage }.keys.firstOrNull()
+
     val appAliases: MutableMap<String, String>
         get() = object : MutableMap<String, String> {
             private val backing = prefs.all
