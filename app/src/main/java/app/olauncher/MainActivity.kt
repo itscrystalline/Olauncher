@@ -41,6 +41,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.Calendar
+import androidx.navigation.findNavController
 
 class MainActivity : AppCompatActivity() {
 
@@ -70,8 +71,8 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        navController = Navigation.findNavController(this, R.id.nav_host_fragment)
-        viewModel = ViewModelProvider(this).get(MainViewModel::class.java)
+        navController = this.findNavController(R.id.nav_host_fragment)
+        viewModel = ViewModelProvider(this)[MainViewModel::class.java]
         if (prefs.firstOpen) {
             viewModel.firstOpen(true)
             prefs.firstOpen = false

@@ -54,6 +54,8 @@ class AppDrawerFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         prefs = Prefs(requireContext())
+        prefs.appAliases["alias.cm"] = "com.android.chrome"
+        prefs.appAliases["alias.ca"] = "com.android.camera2"
         arguments?.let {
             flag = it.getInt(Constants.Key.FLAG, Constants.FLAG_LAUNCH_APP)
             canRename = it.getBoolean(Constants.Key.RENAME, false)
@@ -161,7 +163,8 @@ class AppDrawerFragment : Fragment() {
             appRenameListener = { appModel, renameLabel ->
                 prefs.setAppRenameLabel(appModel.appPackage, renameLabel)
                 viewModel.getAppList()
-            }
+            },
+            aliases = prefs.appAliases
         )
 
         linearLayoutManager = object : LinearLayoutManager(requireContext()) {

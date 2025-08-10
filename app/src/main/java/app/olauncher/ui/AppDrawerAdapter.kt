@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.UserHandle
 import android.text.Editable
 import android.text.TextWatcher
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -22,6 +23,7 @@ import app.olauncher.helper.hideKeyboard
 import app.olauncher.helper.isSystemApp
 import app.olauncher.helper.showKeyboard
 import java.text.Normalizer
+import java.util.Locale
 
 class AppDrawerAdapter(
     private var flag: Int,
@@ -31,6 +33,7 @@ class AppDrawerAdapter(
     private val appDeleteListener: (AppModel) -> Unit,
     private val appHideListener: (AppModel, Int) -> Unit,
     private val appRenameListener: (AppModel, String) -> Unit,
+    private val aliases: Map<String, String>
 ) : ListAdapter<AppModel, AppDrawerAdapter.ViewHolder>(DIFF_CALLBACK), Filterable {
 
     companion object {
@@ -52,7 +55,13 @@ class AppDrawerAdapter(
     var appFilteredList: MutableList<AppModel> = mutableListOf()
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder =
-        ViewHolder(AdapterAppDrawerBinding.inflate(LayoutInflater.from(parent.context), parent, false))
+        ViewHolder(
+            AdapterAppDrawerBinding.inflate(
+                LayoutInflater.from(parent.context),
+                parent,
+                false
+            )
+        )
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         try {
@@ -82,12 +91,24 @@ class AppDrawerAdapter(
                 isBangSearch = charSearch?.startsWith("!") ?: false
                 autoLaunch = charSearch?.startsWith(" ")?.not() ?: true
 
-                val appFilteredList = (if (charSearch.isNullOrBlank()) appsList
-                else appsList.filter { app ->
-                    appLabelMatches(app.appLabel, charSearch)
-//                }.sortedByDescending {
-//                    charSearch.contentEquals(it.appLabel, true)
-                } as MutableList<AppModel>)
+                val charSearchLower = charSearch.toString().lowercase();
+                val appFilteredList = (
+                        if (charSearch.isNullOrBlank()) appsList
+                        else appsList.filter { app ->
+                            appLabelMatches(
+                                app.appLabel,
+                                charSearch
+                            ) || app.appPackage == aliases["alias.$charSearchLower"]
+                        }.sortedWith { a, b ->
+                            val aAliased = a.appPackage == aliases["alias.$charSearchLower"]
+                            val bAliased = b.appPackage == aliases["alias.$charSearchLower"]
+                            when {
+                                aAliased && !bAliased -> -1
+                                !aAliased && bAliased -> 1
+                                else -> 0
+                            }
+                        } as MutableList<AppModel>
+                        )
 
                 val filterResults = FilterResults()
                 filterResults.values = appFilteredList
@@ -141,7 +162,8 @@ class AppDrawerAdapter(
             appClickListener(appFilteredList[0])
     }
 
-    class ViewHolder(private val binding: AdapterAppDrawerBinding) : RecyclerView.ViewHolder(binding.root) {
+    class ViewHolder(private val binding: AdapterAppDrawerBinding) :
+        RecyclerView.ViewHolder(binding.root) {
 
         fun bind(
             flag: Int,
@@ -165,7 +187,8 @@ class AppDrawerAdapter(
                 appTitle.setOnClickListener { clickListener(appModel) }
                 appTitle.setOnLongClickListener {
                     if (appModel.appPackage.isNotEmpty()) {
-                        appDelete.alpha = if (root.context.isSystemApp(appModel.appPackage)) 0.5f else 1.0f
+                        appDelete.alpha =
+                            if (root.context.isSystemApp(appModel.appPackage)) 0.5f else 1.0f
                         appHide.text = if (flag == Constants.FLAG_HIDDEN_APPS)
                             root.context.getString(R.string.adapter_show)
                         else

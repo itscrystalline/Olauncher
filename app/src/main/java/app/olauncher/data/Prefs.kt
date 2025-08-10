@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.view.Gravity
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.content.edit
 
 class Prefs(context: Context) {
     private val PREFS_FILENAME = "app.olauncher"
@@ -457,5 +458,48 @@ class Prefs(context: Context) {
 
     fun getAppRenameLabel(appPackage: String): String = prefs.getString(appPackage, "").toString()
 
-    fun setAppRenameLabel(appPackage: String, renameLabel: String) = prefs.edit().putString(appPackage, renameLabel).apply()
+    fun setAppRenameLabel(appPackage: String, renameLabel: String) =
+        prefs.edit() { putString(appPackage, renameLabel) }
+
+    val appAliases: MutableMap<String, String>
+        get() = object : MutableMap<String, String> {
+            private val backing = prefs.all
+                .filter { it.key.startsWith("alias.") && it.value is String }
+                .mapValues { it.value as String }
+                .toMutableMap()
+
+            override val entries get() = backing.entries
+            override val keys get() = backing.keys
+            override val size get() = backing.size
+            override val values get() = backing.values
+
+            override fun containsKey(key: String) = backing.containsKey(key)
+            override fun containsValue(value: String) = backing.containsValue(value)
+            override fun get(key: String) = backing[key]
+            override fun isEmpty() = backing.isEmpty()
+
+            override fun put(key: String, value: String): String? {
+                prefs.edit() { putString(key, value) }
+                return backing.put(key, value)
+            }
+
+            override fun putAll(from: Map<out String, String>) {
+                prefs.edit() {
+                    from.forEach { (k, v) -> putString(k, v) }
+                }
+                backing.putAll(from)
+            }
+
+            override fun remove(key: String): String? {
+                prefs.edit() { remove(key) }
+                return backing.remove(key)
+            }
+
+            override fun clear() {
+                prefs.edit() {
+                    backing.keys.forEach { remove(it) }
+                }
+                backing.clear()
+            }
+        }
 }
