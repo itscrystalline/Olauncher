@@ -49,7 +49,7 @@ fn default_config() -> Result<String, String> {
     let map_json = json
         .as_object_mut()
         .ok_or("cannot convert json to object??")?;
-    let json_pretty = serde_json::to_string(map_json).map_err(|e| format!("{e}"))?;
+    let json_pretty = serde_json::to_string_pretty(map_json).map_err(|e| format!("{e}"))?;
     Ok(json_pretty)
 }
 

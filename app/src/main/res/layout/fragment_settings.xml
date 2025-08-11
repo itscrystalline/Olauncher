@@ -500,7 +500,6 @@
                     android:ems="10"
                     android:hint="JSON"
                     android:inputType="text|textImeMultiLine|textMultiLine|textNoSuggestions"
-                    android:maxLines="100"
                     android:minLines="5"
                     android:scrollbars="horizontal|vertical"
                     android:singleLine="false"
