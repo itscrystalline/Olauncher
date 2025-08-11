@@ -7,14 +7,24 @@
 }: {
   android = {
     enable = true;
+    ndk.enable = true;
     android-studio = {
       enable = true;
     };
-    buildTools.version = [ "35.0.0" ];
+    buildTools.version = ["35.0.0"];
     platforms.version = ["34"];
   };
+
+  languages.rust = {
+    enable = true;
+    channel = "stable";
+    components = ["rustc" "cargo" "clippy" "rustfmt" "rust-analyzer"];
+    targets = ["aarch64-linux-android" "x86_64-linux-android"];
+  };
+  languages.python.enable = true;
   # # https://devenv.sh/basics/
-  # env.GREET = "devenv";
+
+  env.QT_QPA_PLATFORM = "xcb";
   #
   # # https://devenv.sh/packages/
   # packages = [ pkgs.git ];

@@ -29,4 +29,12 @@ devenv.local.nix
 
 .android*
 
-app*
+app/build*
+app/debug*
+app/release*
+
+# Added by cargo
+
+/occasion-android/target
+
+result*

@@ -5,6 +5,7 @@ import android.content.SharedPreferences
 import android.view.Gravity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.content.edit
+import app.olauncher.helper.OccasionNative
 
 class Prefs(context: Context) {
     private val PREFS_FILENAME = "app.olauncher"
@@ -89,6 +90,8 @@ class Prefs(context: Context) {
     private val CALENDAR_APP_PACKAGE = "CALENDAR_APP_PACKAGE"
     private val CALENDAR_APP_USER = "CALENDAR_APP_USER"
     private val CALENDAR_APP_CLASS_NAME = "CALENDAR_APP_CLASS_NAME"
+
+    private val OCCASION_JSON = "OCCASION_JSON"
 
     private val prefs: SharedPreferences = context.getSharedPreferences(PREFS_FILENAME, 0);
 
@@ -399,6 +402,10 @@ class Prefs(context: Context) {
     var calendarAppClassName: String?
         get() = prefs.getString(CALENDAR_APP_CLASS_NAME, "").toString()
         set(value) = prefs.edit().putString(CALENDAR_APP_CLASS_NAME, value).apply()
+
+    var occasionConfig: String
+        get() = prefs.getString(OCCASION_JSON, "").toString()
+        set(value) = prefs.edit() { putString(OCCASION_JSON, value) }
 
     fun getAppName(location: Int): String {
         return when (location) {

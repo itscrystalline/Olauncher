@@ -474,6 +474,43 @@
 
             <LinearLayout
                 android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:layout_marginHorizontal="12dp"
+                android:layout_marginTop="12dp"
+                android:animateLayoutChanges="true"
+                android:background="@drawable/rounded_rect_shade_color"
+                android:orientation="vertical"
+                android:padding="12dp">
+
+                <TextView
+                    android:id="@+id/tvOccasionConfig"
+                    style="@style/TextLarge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:layout_marginTop="12dp"
+                    android:text="@string/occasion_config"
+                    android:textColor="?attr/primaryColor" />
+
+                <EditText
+                    android:id="@+id/etOccasionConfig"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:editable="true"
+                    android:ems="10"
+                    android:hint="JSON"
+                    android:inputType="text|textImeMultiLine|textMultiLine|textNoSuggestions"
+                    android:maxLines="100"
+                    android:minLines="5"
+                    android:scrollbars="horizontal|vertical"
+                    android:singleLine="false"
+                    android:textSize="12sp"
+                    android:typeface="monospace" />
+
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginHorizontal="12dp"
                 android:layout_marginTop="12dp"
@@ -949,6 +986,7 @@
                         android:padding="10dp"
                         android:text="@string/off" />
                 </FrameLayout>
+
             </LinearLayout>
 
             <LinearLayout

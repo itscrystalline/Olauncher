@@ -137,5 +137,6 @@
     <string name="alignment_changed">アライメントが変更されました ✅</string>
     <string name="home_screen">ホーム画面</string>
     <string name="hey">やあ</string>
-    <string name="set_alias">仮名を設定</string> <!-- Japanese -->
+    <string name="set_alias">仮名を設定</string>
+    <string name="occasion_config">Occasionの設定</string> <!-- Japanese -->
 </resources>

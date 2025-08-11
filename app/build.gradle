@@ -1,8 +1,21 @@
+import com.android.build.gradle.tasks.MergeSourceSetFolders
+import com.nishtahir.CargoBuildTask
+
 apply plugin: 'com.android.application'
 apply plugin: 'kotlin-android'
+apply plugin: 'org.mozilla.rust-android-gradle.rust-android'
 
 android {
+    signingConfigs {
+        debug {
+            storeFile file('/home/itscrystalline/Documents/keystore.jks')
+            storePassword '2147483648'
+            keyAlias 'olauncher'
+            keyPassword '2147483648'
+        }
+    }
     compileSdk 34
+    ndkVersion "26.1.10909125"
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
@@ -41,6 +54,25 @@ android {
         viewBinding = true
     }
     namespace 'app.olauncher'
+
+}
+
+tasks.configureEach { task ->
+    if ((task.name == 'mergeDebugJniLibFolders' || task.name == 'mergeReleaseJniLibFolders')) {
+        task.dependsOn 'cargoBuild'
+    }
+}
+// The below dependsOn is needed till https://github.com/mozilla/rust-android-gradle/issues/85 is resolved this fix was got from #118
+tasks.matching { it.name.matches(/merge.*JniLibFolders/) }.configureEach {
+    it.inputs.dir(new File(buildDir, "rustJniLibs/android"))
+    it.dependsOn("cargoBuild")
+}
+
+cargo {
+    module = "../occasion-android"       // Or whatever directory contains your Cargo.toml
+    libname = "occasion_android"          // Or whatever matches Cargo.toml's [package] name.
+    targets = ["arm64", "x86_64"]  // See bellow for a longer list of options
+    profile = "release"
 }
 
 dependencies {

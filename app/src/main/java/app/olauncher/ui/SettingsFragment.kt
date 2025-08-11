@@ -4,15 +4,19 @@ import android.app.admin.DevicePolicyManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.res.ColorStateList
 import android.os.Build
 import android.os.Bundle
 import android.os.Process
 import android.provider.Settings
+import android.text.Editable
+import android.text.TextWatcher
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowInsets
+import android.view.inputmethod.EditorInfo
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.os.bundleOf
@@ -26,6 +30,7 @@ import app.olauncher.R
 import app.olauncher.data.Constants
 import app.olauncher.data.Prefs
 import app.olauncher.databinding.FragmentSettingsBinding
+import app.olauncher.helper.OccasionNative
 import app.olauncher.helper.animateAlpha
 import app.olauncher.helper.appUsagePermissionGranted
 import app.olauncher.helper.getColorFromAttr
@@ -50,7 +55,11 @@ class SettingsFragment : Fragment(), View.OnClickListener, View.OnLongClickListe
     private var _binding: FragmentSettingsBinding? = null
     private val binding get() = _binding!!
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View {
         _binding = FragmentSettingsBinding.inflate(inflater, container, false)
         return binding.root
     }
@@ -63,7 +72,8 @@ class SettingsFragment : Fragment(), View.OnClickListener, View.OnLongClickListe
         } ?: throw Exception("Invalid Activity")
         viewModel.isOlauncherDefault()
 
-        deviceManager = requireContext().getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
+        deviceManager =
+            requireContext().getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
         componentName = ComponentName(requireContext(), DeviceAdmin::class.java)
         checkAdminPermission()
 
@@ -81,6 +91,7 @@ class SettingsFragment : Fragment(), View.OnClickListener, View.OnLongClickListe
         populateSwipeApps()
         populateSwipeDownAction()
         populateActionHints()
+        populateOccasionConfig()
         initClickListeners()
         initObservers()
     }
@@ -98,7 +109,12 @@ class SettingsFragment : Fragment(), View.OnClickListener, View.OnLongClickListe
             R.id.olauncherHiddenApps -> showHiddenApps()
             R.id.olauncherPro -> requireContext().openUrl(Constants.URL_OLAUNCHER_PRO)
             R.id.screenTimeOnOff -> viewModel.showDialog.postValue(Constants.Dialog.DIGITAL_WELLBEING)
-            R.id.appInfo -> openAppInfo(requireContext(), Process.myUserHandle(), BuildConfig.APPLICATION_ID)
+            R.id.appInfo -> openAppInfo(
+                requireContext(),
+                Process.myUserHandle(),
+                BuildConfig.APPLICATION_ID
+            )
+
             R.id.setLauncher -> viewModel.resetLauncherLiveData.call()
             R.id.toggleLock -> toggleLockMode()
             R.id.autoShowKeyboard -> toggleKeyboardText()
@@ -257,6 +273,76 @@ class SettingsFragment : Fragment(), View.OnClickListener, View.OnLongClickListe
         binding.swipeLeftApp.setOnLongClickListener(this)
         binding.swipeRightApp.setOnLongClickListener(this)
         binding.toggleLock.setOnLongClickListener(this)
+
+        binding.etOccasionConfig?.let {
+            it.onFocusChangeListener = View.OnFocusChangeListener { _, hasFocus ->
+                val json = it.text.toString();
+                val result = OccasionNative.validate(json);
+                if (!hasFocus && result) {
+                    prefs.occasionConfig = json
+                    it.backgroundTintList = null
+                } else if (!result) {
+                    it.backgroundTintList = ColorStateList.valueOf(
+                        resources.getColor(
+                            R.color.design_default_color_error,
+                            null
+                        )
+                    )
+                }
+            }
+
+            it.addTextChangedListener(object : TextWatcher {
+                override fun afterTextChanged(s: Editable?) {
+                    val json = it.text.toString();
+                    val result = OccasionNative.validate(json);
+                    if (result) {
+                        prefs.occasionConfig = json
+                        it.backgroundTintList = null
+                    } else
+                        it.backgroundTintList = ColorStateList.valueOf(
+                            resources.getColor(
+                                R.color.design_default_color_error,
+                                null
+                            )
+                        )
+                }
+
+                override fun beforeTextChanged(
+                    s: CharSequence?,
+                    start: Int,
+                    count: Int,
+                    after: Int,
+                ) {
+                }
+
+                override fun onTextChanged(
+                    s: CharSequence?,
+                    start: Int,
+                    before: Int,
+                    count: Int,
+                ) {
+                    it.hint = ""
+                }
+            })
+            it.setOnEditorActionListener { _, actionCode, _ ->
+                if (actionCode == EditorInfo.IME_ACTION_DONE) {
+                    val json = it.text.toString();
+                    val result = OccasionNative.validate(json);
+                    if (result) {
+                        prefs.occasionConfig = json
+                        it.backgroundTintList = null
+                    } else
+                        it.backgroundTintList = ColorStateList.valueOf(
+                            resources.getColor(
+                                R.color.design_default_color_error,
+                                null
+                            )
+                        )
+                    return@setOnEditorActionListener true
+                }
+                false
+            }
+        }
     }
 
     private fun initObservers() {
@@ -337,7 +423,8 @@ class SettingsFragment : Fragment(), View.OnClickListener, View.OnLongClickListe
         else
             @Suppress("DEPRECATION", "InlinedApi")
             requireActivity().window.decorView.apply {
-                systemUiVisibility = View.SYSTEM_UI_FLAG_LAYOUT_STABLE or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                systemUiVisibility =
+                    View.SYSTEM_UI_FLAG_LAYOUT_STABLE or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
             }
     }
 
@@ -406,7 +493,10 @@ class SettingsFragment : Fragment(), View.OnClickListener, View.OnLongClickListe
                     DevicePolicyManager.EXTRA_ADD_EXPLANATION,
                     getString(R.string.admin_permission_message)
                 )
-                requireActivity().startActivityForResult(intent, Constants.REQUEST_CODE_ENABLE_ADMIN)
+                requireActivity().startActivityForResult(
+                    intent,
+                    Constants.REQUEST_CODE_ENABLE_ADMIN
+                )
             }
         }
         populateLockSettings()
@@ -446,7 +536,10 @@ class SettingsFragment : Fragment(), View.OnClickListener, View.OnLongClickListe
         if (isOlauncherDefault(requireContext()))
             requireContext().showToast(getString(R.string.your_wallpaper_will_update_shortly))
         else
-            requireContext().showToast(getString(R.string.olauncher_is_not_default_launcher), Toast.LENGTH_LONG)
+            requireContext().showToast(
+                getString(R.string.olauncher_is_not_default_launcher),
+                Toast.LENGTH_LONG
+            )
     }
 
     private fun updateHomeAppsNum(num: Int) {
@@ -490,8 +583,16 @@ class SettingsFragment : Fragment(), View.OnClickListener, View.OnLongClickListe
 
     private fun setPlainWallpaper(appTheme: Int) {
         when (appTheme) {
-            AppCompatDelegate.MODE_NIGHT_YES -> setPlainWallpaper(requireContext(), android.R.color.black)
-            AppCompatDelegate.MODE_NIGHT_NO -> setPlainWallpaper(requireContext(), android.R.color.white)
+            AppCompatDelegate.MODE_NIGHT_YES -> setPlainWallpaper(
+                requireContext(),
+                android.R.color.black
+            )
+
+            AppCompatDelegate.MODE_NIGHT_NO -> setPlainWallpaper(
+                requireContext(),
+                android.R.color.white
+            )
+
             else -> {
                 if (requireContext().isDarkThemeOn())
                     setPlainWallpaper(requireContext(), android.R.color.black)
@@ -523,7 +624,8 @@ class SettingsFragment : Fragment(), View.OnClickListener, View.OnLongClickListe
 
     private fun populateScreenTimeOnOff() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            if (requireContext().appUsagePermissionGranted()) binding.screenTimeOnOff.text = getString(R.string.on)
+            if (requireContext().appUsagePermissionGranted()) binding.screenTimeOnOff.text =
+                getString(R.string.on)
             else binding.screenTimeOnOff.text = getString(R.string.off)
         } else binding.screenTimeLayout.visibility = View.GONE
     }
@@ -540,7 +642,10 @@ class SettingsFragment : Fragment(), View.OnClickListener, View.OnLongClickListe
 
     private fun updateHomeBottomAlignment() {
         if (viewModel.isOlauncherDefault.value != true) {
-            requireContext().showToast(getString(R.string.please_set_olauncher_as_default_first), Toast.LENGTH_LONG)
+            requireContext().showToast(
+                getString(R.string.please_set_olauncher_as_default_first),
+                Toast.LENGTH_LONG
+            )
             return
         }
         prefs.homeBottomAlignment = !prefs.homeBottomAlignment
@@ -619,10 +724,24 @@ class SettingsFragment : Fragment(), View.OnClickListener, View.OnLongClickListe
 
     private fun populateActionHints() {
         if (prefs.aboutClicked.not())
-            binding.aboutOlauncher.setCompoundDrawablesWithIntrinsicBounds(0, 0, android.R.drawable.stat_notify_more, 0)
+            binding.aboutOlauncher.setCompoundDrawablesWithIntrinsicBounds(
+                0,
+                0,
+                android.R.drawable.stat_notify_more,
+                0
+            )
         if (viewModel.isOlauncherDefault.value != true) return
         if (prefs.rateClicked.not() && prefs.toShowHintCounter > Constants.HINT_RATE_US && prefs.toShowHintCounter < Constants.HINT_RATE_US + 100)
-            binding.rate.setCompoundDrawablesWithIntrinsicBounds(0, android.R.drawable.arrow_down_float, 0, 0)
+            binding.rate.setCompoundDrawablesWithIntrinsicBounds(
+                0,
+                android.R.drawable.arrow_down_float,
+                0,
+                0
+            )
+    }
+
+    private fun populateOccasionConfig() {
+        binding.etOccasionConfig?.setText(prefs.occasionConfig)
     }
 
     private fun populateProMessage() {
